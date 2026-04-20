@@ -15,7 +15,7 @@
 | ➖ | Intentionally deferred (post-MVP) — see notes |
 | ✂︎ | Removed by design (RN-only or out of iOS scope) |
 
-**Last updated:** 2026-04-20
+**Last updated:** 2026-04-20 (Phase 1 domain port complete · Phase 2 Supabase/Keychain/Households shipped · Phase 3 auth+onboarding stubs wired)
 **Repo branch:** `main`
 
 ---
@@ -25,9 +25,9 @@
 | Phase | Status | Notes |
 |---|---|---|
 | 0 — Bootstrap (Xcode project, SPM, CI) | ◐ | Xcode project generated via XcodeGen; SPM packages resolved; CI not yet wired |
-| 1 — Domain port (`utils/*` → `Domain/*`) | ☐ | |
-| 2 — Core plumbing (Supabase, Keychain, RC, push) | ☐ | |
-| 3 — Auth + onboarding | ☐ | |
+| 1 — Domain port (`utils/*` → `Domain/*`) | ☑ | 174 tests / 31 suites passing |
+| 2 — Core plumbing (Supabase, Keychain, RC, push) | ◐ | Supabase client + Keychain + households repo shipped; RC / push / analytics pending |
+| 3 — Auth + onboarding | ◐ | Magic-link sign-in, RootView gate, CreateHouseholdView, stub tab bar; JoinHouseholdView pending |
 | 4 — Dashboard + Expenses | ☐ | |
 | 5 — Bills | ☐ | |
 | 6 — Settle + Balance breakdown | ☐ | |
@@ -64,16 +64,16 @@ P1 ship-blocker: 100 % test coverage on every row in this section.
 
 | RN source | iOS target | Status | Owning file(s) | Tests | Notes |
 |---|---|---|---|---|---|
-| `utils/currency.ts` | `Domain/Money/Money.swift` | ☐ | | ☐ | Decimal parse + `formatted(.currency(...))` |
-| `utils/splits.ts` | `Domain/Splits/Splits.swift` | ☐ | | ☐ | Equal / pct / exact + first-member-absorbs-remainder |
-| `utils/debts.ts` | `Domain/Debts/Debts.swift` | ☐ | | ☐ | Greedy simplify, pairwise, payer-self-split skip |
-| `utils/proration.ts` | `Domain/Proration/Proration.swift` | ☐ | | ☐ | Days-present, household-tz-aware |
-| `utils/billFrequency.ts` | `Domain/BillFrequency/BillFrequency.swift` | ☐ | | ☐ | End-of-month clamp matches migration 014 |
-| `utils/billStatus.ts` | `Domain/BillStatus/BillStatus.swift` | ☐ | | ☐ | `isFullyPaid`, `isOverdue` predicates |
-| `utils/cardState.ts` | `Domain/CardState/CardState.swift` | ☐ | | ☐ | Tone enum for dashboard cards |
-| `utils/deeplinks.ts` | `Domain/Deeplinks/Deeplinks.swift` | ☐ | | ☐ | Venmo / Cash App / invite URL builders |
-| Domain models | `Domain/Models/*` | ☐ | | n/a | Household, Member, Expense, ExpenseSplit, RecurringBill, BillingCycle, Settlement, MoveOut, Subscription |
-| Domain enums | `Domain/Enums/*` | ☐ | | n/a | ExpenseCategory, SettlementMethod, BillFrequency, SplitType, SubscriptionStatus |
+| `utils/currency.ts` | `Domain/Money/Money.swift` | ☑ | `Domain/Money/Money.swift` | ☑ | Decimal parse + `formatted(.currency(...))` + half-away-from-zero rounding |
+| `utils/splits.ts` | `Domain/Splits/Splits.swift` | ☑ | `Domain/Splits/Splits.swift` | ☑ | Equal / pct / exact + first-member-absorbs-remainder |
+| `utils/debts.ts` | `Domain/Debts/Debts.swift` | ☑ | `Domain/Debts/Debts.swift` | ☑ | Greedy simplify, pairwise, payer-self-split skip |
+| `utils/proration.ts` | `Domain/Proration/Proration.swift` | ☑ | `Domain/Proration/Proration.swift` | ☑ | Days-present, household-tz-aware |
+| `utils/billFrequency.ts` | `Domain/BillFrequency/BillFrequency.swift` | ☑ | `Domain/BillFrequency/BillFrequencyAdvance.swift` | ☑ | End-of-month clamp matches migration 014 |
+| `utils/billStatus.ts` | `Domain/BillStatus/BillStatus.swift` | ☑ | `Domain/BillStatus/BillStatus.swift` | ☑ | `isFullyPaid`, `isOverdue` predicates |
+| `utils/cardState.ts` | `Domain/CardState/CardState.swift` | ☑ | `Domain/CardState/CardState.swift` | ☑ | Tone enum for dashboard cards |
+| `utils/deeplinks.ts` | `Domain/Deeplinks/Deeplinks.swift` | ☑ | `Domain/Deeplinks/Deeplinks.swift` | ☑ | Venmo / Cash App / invite URL builders |
+| Domain models | `Domain/Models/*` | ☑ | `Domain/Models/*` | n/a | Household, Member, Expense, ExpenseSplit, RecurringBill, BillingCycle, Settlement, MoveOut, Subscription |
+| Domain enums | `Domain/Enums/*` | ☑ | `Domain/Enums/*` | n/a | ExpenseCategory, SettlementMethod, BillFrequency, SplitType, SubscriptionStatus |
 
 ---
 
@@ -81,11 +81,11 @@ P1 ship-blocker: 100 % test coverage on every row in this section.
 
 | Capability | RN reference | iOS target | Status | Owning file(s) | Notes |
 |---|---|---|---|---|---|
-| Supabase client singleton + protocol | `lib/supabase.ts` | `Core/Supabase/SupabaseClientProvider.swift` | ☐ | | Inject via env; never instantiate in views |
-| Keychain auth storage | Expo SecureStore in `lib/supabase.ts` | `Core/Persistence/KeychainAuthStorage.swift` | ☐ | | `AuthLocalStorage` adapter |
-| `AppSession` (auth-state observer) | `stores/authStore.ts` | `App/AppSession.swift` | ☐ | | Wires repositories, observes auth changes |
-| Auth repository | `useAuth.ts` | `Core/Supabase/Repositories/AuthRepository.swift` | ☐ | | Magic-link send, sign-out, session restore |
-| Households repository | `hooks/useHousehold.ts` | `Core/Supabase/Repositories/HouseholdsRepository.swift` | ☐ | | CRUD + `create_household`, `rotate_invite_token` |
+| Supabase client singleton + protocol | `lib/supabase.ts` | `Core/Supabase/SupabaseClientProvider.swift` | ☑ | `Core/Supabase/SupabaseClientProvider.swift`, `SupabaseClientProviding.swift` | Lazy client; safe boot when xcconfig empty |
+| Keychain auth storage | Expo SecureStore in `lib/supabase.ts` | `Core/Persistence/KeychainAuthStorage.swift` | ☑ | `Core/Persistence/KeychainAuthStorage.swift` | `AuthLocalStorage` adapter, `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` |
+| `AppSession` (auth-state observer) | `stores/authStore.ts` | `App/AppSession.swift` | ☑ | `Core/Auth/AuthSession.swift`, `Core/Household/HouseholdSession.swift` | `@Observable`, `authStateChanges` listener |
+| Auth repository | `useAuth.ts` | `Core/Supabase/Repositories/AuthRepository.swift` | ☑ | (folded into `AuthSession`) | Magic-link send, sign-out, `handleAuthCallback` |
+| Households repository | `hooks/useHousehold.ts` | `Core/Supabase/Repositories/HouseholdsRepository.swift` | ☑ | `Core/Repositories/HouseholdRepository.swift` | `create_household`, `join_household_by_token`, `rotate_invite_token` |
 | Members repository | (inline in `useHousehold`) | `Core/Supabase/Repositories/MembersRepository.swift` | ☐ | | Active filter; `was_household_member` aware |
 | Cycles repository | (inline) | `Core/Supabase/Repositories/CyclesRepository.swift` | ☐ | | Read current open cycle |
 | RevenueCat service | `lib/revenuecat.ts` | `Core/RevenueCat/RevenueCatService.swift` | ☐ | | `logIn("household:\(uuid)")`, entitlement check |
@@ -100,11 +100,11 @@ P1 ship-blocker: 100 % test coverage on every row in this section.
 
 | RN screen | iOS screen | Status | Owning file(s) | Notes |
 |---|---|---|---|---|
-| `app/(auth)/sign-in.tsx` | `Features/Auth/SignInView.swift` | ☐ | | Magic-link email entry; `#if DEBUG` dev bypass |
-| Magic-link callback handler | `Features/Auth/AuthCallbackView.swift` | ☐ | | `homesplit://auth-callback?...` |
+| `app/(auth)/sign-in.tsx` | `Features/Auth/SignInView.swift` | ☑ | `Features/Auth/SignInView.swift` | Magic-link email entry; dev bypass pending |
+| Magic-link callback handler | `Features/Auth/AuthCallbackView.swift` | ☑ | `App/HomesplitApp.swift` (`.onOpenURL`), `Core/Auth/AuthSession.handleAuthCallback` | Routed inline from root scene |
 | `app/(auth)/join/[token].tsx` | `Features/Onboarding/JoinHouseholdView.swift` | ☐ | | Universal link `https://homesplit.app/join/{token}` |
-| First-run: create household | `Features/Onboarding/CreateHouseholdView.swift` | ☐ | | Calls `create_household` RPC |
-| Root router (auth / onboarding / tabs) | `App/HomesplitApp.swift` + `App/RootRouter.swift` | ☐ | | Decides based on `AppSession` |
+| First-run: create household | `Features/Onboarding/CreateHouseholdView.swift` | ☑ | `Features/Onboarding/CreateHouseholdView.swift` | Calls `create_household` RPC, refreshes `HouseholdSession` |
+| Root router (auth / onboarding / tabs) | `App/HomesplitApp.swift` + `App/RootRouter.swift` | ☑ | `App/RootView.swift` | Routes between SignInView / CreateHouseholdView / MainTabView |
 
 ---
 
@@ -112,8 +112,8 @@ P1 ship-blocker: 100 % test coverage on every row in this section.
 
 | RN | iOS | Status | Owning file(s) | Notes |
 |---|---|---|---|---|
-| Tab bar (Home / Expenses / Bills / Household) | `App/RootTabView.swift` | ☐ | | 4 tabs, badges only on Home + Bills |
-| Dashboard screen | `Features/Dashboard/DashboardView.swift` | ☐ | | Balances, "you owe", bills due, recent expenses |
+| Tab bar (Home / Expenses / Bills / Household) | `App/RootTabView.swift` | ◐ | `Features/Dashboard/MainTabView.swift` | 4 tabs wired; badges not yet |
+| Dashboard screen | `Features/Dashboard/DashboardView.swift` | ◐ | `Features/Dashboard/HomeView.swift` | Stub only — balances/cards pending |
 | Dashboard stat cards | `Components/Cards/BalanceCard.swift`, `Components/Cards/StatCard.swift` | ☐ | | Tones from `Domain/CardState/` |
 | Recent transactions list | `Features/Dashboard/RecentTransactionsSection.swift` | ☐ | | Top N expenses + settlements |
 | Add-expense FAB / toolbar entry | (folded into `DashboardView` toolbar) | ☐ | | Sheets `AddExpenseView` |

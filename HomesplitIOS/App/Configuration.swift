@@ -24,6 +24,18 @@ enum Configuration {
     static var appEnv:          String { stringValue(.appEnv) }
     static var isProd:          Bool   { appEnv == "production" }
 
+    /// Non-fatal probe used at boot so AuthSession can skip initialization
+    /// when the test host launches with an empty xcconfig. Real requests
+    /// still fatalError via `stringValue` the moment they're issued.
+    static var isSupabaseConfigured: Bool {
+        optionalStringValue(.supabaseURL).map { !$0.isEmpty } == true
+            && optionalStringValue(.supabaseAnonKey).map { !$0.isEmpty } == true
+    }
+
+    private static func optionalStringValue(_ key: Key) -> String? {
+        Bundle.main.object(forInfoDictionaryKey: key.rawValue) as? String
+    }
+
     private static func stringValue(_ key: Key) -> String {
         guard let value = Bundle.main.object(forInfoDictionaryKey: key.rawValue) as? String,
               !value.isEmpty else {
