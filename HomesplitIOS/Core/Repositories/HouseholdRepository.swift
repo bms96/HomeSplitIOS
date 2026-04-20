@@ -62,9 +62,15 @@ struct HouseholdRepository: HouseholdRepositoryProtocol {
         self.provider = provider
     }
 
-    private var client: SupabaseClient { provider.client }
+    private func requireClient() throws -> SupabaseClient {
+        guard Configuration.isSupabaseConfigured else {
+            throw ConfigurationError.supabaseNotConfigured
+        }
+        return provider.client
+    }
 
     func currentHousehold(userId: UUID) async throws -> MembershipWithHousehold? {
+        let client = try requireClient()
         let rows: [MembershipWithHousehold] = try await client
             .from("members")
             .select("*, household:households(*)")
@@ -78,7 +84,8 @@ struct HouseholdRepository: HouseholdRepositoryProtocol {
     }
 
     func members(householdId: UUID) async throws -> [Member] {
-        try await client
+        let client = try requireClient()
+        return try await client
             .from("members")
             .select()
             .eq("household_id", value: householdId)
@@ -94,6 +101,7 @@ struct HouseholdRepository: HouseholdRepositoryProtocol {
         timezone: String = "America/New_York",
         cycleStartDay: Int = 1
     ) async throws -> UUID {
+        let client = try requireClient()
         struct Params: Encodable {
             let p_name: String
             let p_display_name: String
@@ -112,6 +120,7 @@ struct HouseholdRepository: HouseholdRepositoryProtocol {
     }
 
     func joinHousehold(token: String) async throws -> UUID {
+        let client = try requireClient()
         struct Params: Encodable { let token: String }
         return try await client
             .rpc("join_household_by_token", params: Params(token: token))
@@ -120,6 +129,7 @@ struct HouseholdRepository: HouseholdRepositoryProtocol {
     }
 
     func rotateInviteToken(householdId: UUID) async throws -> String {
+        let client = try requireClient()
         struct Params: Encodable { let hid: UUID }
         return try await client
             .rpc("rotate_invite_token", params: Params(hid: householdId))
@@ -128,6 +138,7 @@ struct HouseholdRepository: HouseholdRepositoryProtocol {
     }
 
     func updateHouseholdName(householdId: UUID, name: String) async throws {
+        let client = try requireClient()
         struct Update: Encodable { let name: String }
         try await client
             .from("households")
@@ -137,6 +148,7 @@ struct HouseholdRepository: HouseholdRepositoryProtocol {
     }
 
     func updateMemberDisplayName(memberId: UUID, displayName: String) async throws {
+        let client = try requireClient()
         struct Update: Encodable {
             let display_name: String
         }

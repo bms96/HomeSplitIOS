@@ -10,15 +10,24 @@ struct AppEnvironment {
     let supabase: any SupabaseClientProviding
     let auth: AuthSession
     let households: any HouseholdRepositoryProtocol
+    let expenses: any ExpensesRepositoryProtocol
+    let balances: any BalancesRepositoryProtocol
+    let recurringBills: any RecurringBillsRepositoryProtocol
     let householdSession: HouseholdSession
 
     static func live() -> AppEnvironment {
         let supabase = SupabaseClientProvider.shared
         let households = HouseholdRepository(provider: supabase)
+        let expenses = ExpensesRepository(provider: supabase)
+        let balances = BalancesRepository(provider: supabase)
+        let recurringBills = RecurringBillsRepository(provider: supabase)
         return AppEnvironment(
             supabase: supabase,
             auth: AuthSession(provider: supabase),
             households: households,
+            expenses: expenses,
+            balances: balances,
+            recurringBills: recurringBills,
             householdSession: HouseholdSession(repository: households)
         )
     }

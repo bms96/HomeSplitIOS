@@ -15,7 +15,7 @@
 | ➖ | Intentionally deferred (post-MVP) — see notes |
 | ✂︎ | Removed by design (RN-only or out of iOS scope) |
 
-**Last updated:** 2026-04-20 (Phase 1 domain port complete · Phase 2 Supabase/Keychain/Households shipped · Phase 3 auth+onboarding stubs wired)
+**Last updated:** 2026-04-20 (Phase 1 domain port complete · Phase 2 Supabase/Keychain/Households shipped · Phase 3 auth+onboarding wired · Phase 4a expenses repo+list+add shipped · Phase 4b balances repo + Home dashboard cards + "You owe" mark-paid shipped · Phase 4c expense detail/edit/delete + row-tap navigation shipped · Phase 5 recurring bills repo + list + add/edit form + detail view with cycle-amount override & mark-paid shipped · Phase 6 settle up + balance breakdown + Venmo/Cash App handoff shipped)
 **Repo branch:** `main`
 
 ---
@@ -28,9 +28,9 @@
 | 1 — Domain port (`utils/*` → `Domain/*`) | ☑ | 174 tests / 31 suites passing |
 | 2 — Core plumbing (Supabase, Keychain, RC, push) | ◐ | Supabase client + Keychain + households repo shipped; RC / push / analytics pending |
 | 3 — Auth + onboarding | ◐ | Magic-link sign-in, RootView gate, CreateHouseholdView, stub tab bar; JoinHouseholdView pending |
-| 4 — Dashboard + Expenses | ☐ | |
-| 5 — Bills | ☐ | |
-| 6 — Settle + Balance breakdown | ☐ | |
+| 4 — Dashboard + Expenses | ◐ | Expenses repo+list+add, BalancesRepository, HomeView cards ("You owe" / "Owed to you") and mark-paid shipped; expense detail/edit/delete + row-tap navigation shipped; bills-due card pending |
+| 5 — Bills | ☑ | Repo + list + add/edit form + detail with cycle-amount override & mark-paid shipped (equal-split only; custom_pct/_amt deferred) |
+| 6 — Settle + Balance breakdown | ☑ | SettleView + BalanceBreakdownView + Venmo/Cash App handoff; reuses `BalancesRepository.settlePair` |
 | 7 — Household management | ☐ | |
 | 8 — Move-out | ☐ | |
 | 9 — Paywall + RevenueCat | ☐ | |
@@ -113,10 +113,10 @@ P1 ship-blocker: 100 % test coverage on every row in this section.
 | RN | iOS | Status | Owning file(s) | Notes |
 |---|---|---|---|---|
 | Tab bar (Home / Expenses / Bills / Household) | `App/RootTabView.swift` | ◐ | `Features/Dashboard/MainTabView.swift` | 4 tabs wired; badges not yet |
-| Dashboard screen | `Features/Dashboard/DashboardView.swift` | ◐ | `Features/Dashboard/HomeView.swift` | Stub only — balances/cards pending |
-| Dashboard stat cards | `Components/Cards/BalanceCard.swift`, `Components/Cards/StatCard.swift` | ☐ | | Tones from `Domain/CardState/` |
-| Recent transactions list | `Features/Dashboard/RecentTransactionsSection.swift` | ☐ | | Top N expenses + settlements |
-| Add-expense FAB / toolbar entry | (folded into `DashboardView` toolbar) | ☐ | | Sheets `AddExpenseView` |
+| Dashboard screen | `Features/Dashboard/DashboardView.swift` | ◐ | `Features/Dashboard/HomeView.swift`, `HomeViewModel.swift` | You owe / Owed to you cards + "You owe" section with mark-paid; bills-due card deferred to Phase 5 |
+| Dashboard stat cards | `Components/Cards/BalanceCard.swift`, `Components/Cards/StatCard.swift` | ◐ | (inline in `HomeView.swift`) | Tones from `Domain/CardState/`; extract to Components when a 3rd consumer appears |
+| Recent transactions list | `Features/Dashboard/RecentTransactionsSection.swift` | ◐ | (inline "You owe" list in `HomeView.swift`) | Top 5 unpaid expenses where viewer is debtor; full recent-transactions list + settlements pending |
+| Add-expense FAB / toolbar entry | (folded into `DashboardView` toolbar) | ◐ | `Features/Expenses/ExpensesView.swift` | `+` toolbar lives on Expenses tab; Home FAB entry point pending |
 
 ---
 
@@ -124,13 +124,13 @@ P1 ship-blocker: 100 % test coverage on every row in this section.
 
 | RN | iOS | Status | Owning file(s) | Notes |
 |---|---|---|---|---|
-| `app/(app)/expenses/index.tsx` | `Features/Expenses/ExpensesListView.swift` | ☐ | | Filter chips, sort, pull-to-refresh, swipe actions |
-| `app/(app)/expenses/add.tsx` (sheet) | `Features/Expenses/AddExpenseView.swift` | ☐ | | `.sheet` + `.presentationDetents` |
-| Expense detail / edit | `Features/Expenses/ExpenseDetailView.swift` | ☐ | | View/edit modes, mark-paid, delete |
-| ExpensesRepository | `Core/Supabase/Repositories/ExpensesRepository.swift` | ☐ | | CRUD + splits |
-| BalancesRepository | `Core/Supabase/Repositories/BalancesRepository.swift` | ☐ | | Reads splits; runs through `Domain/Debts/` |
+| `app/(app)/expenses/index.tsx` | `Features/Expenses/ExpensesListView.swift` | ◐ | `Features/Expenses/ExpensesView.swift`, `ExpensesListViewModel.swift` | Basic list + pull-to-refresh; filter chips / swipe actions pending |
+| `app/(app)/expenses/add.tsx` (sheet) | `Features/Expenses/AddExpenseView.swift` | ☑ | `Features/Expenses/AddExpenseView.swift` | Equal-split only at MVP; presented from Expenses toolbar |
+| Expense detail / edit | `Features/Expenses/ExpenseDetailView.swift` | ☑ | `Features/Expenses/ExpenseDetailView.swift`, `ExpenseDetailViewModel.swift`, `EditExpenseView.swift`, `EditExpenseViewModel.swift` | Detail w/ splits + mark-paid; edit sheet gated on no-settled-splits; delete via confirmationDialog; row-tap wired in `ExpensesView` via `NavigationLink(value:)` |
+| ExpensesRepository | `Core/Supabase/Repositories/ExpensesRepository.swift` | ☑ | `Core/Repositories/ExpensesRepository.swift` | `currentCycle`, `list`, `detail`, `create`, `update`, `delete`, `markSplitPaid` |
+| BalancesRepository | `Core/Supabase/Repositories/BalancesRepository.swift` | ☑ | `Core/Repositories/BalancesRepository.swift` | `balances`, `carryover`, `settlePair`; results run through `Domain/Debts/` |
 | Category preferences | `Core/Supabase/Repositories/CategoryPreferencesRepository.swift` | ☐ | | Hidden + custom labels |
-| Add-expense view model | `Features/Expenses/AddExpenseViewModel.swift` | ☐ | | State machine: `idle → saving → saved/failed` |
+| Add-expense view model | `Features/Expenses/AddExpenseViewModel.swift` | ☑ | `Features/Expenses/AddExpenseViewModel.swift` | `@Observable`; `canSubmit` gate + equal-split submit |
 
 ---
 
@@ -138,13 +138,11 @@ P1 ship-blocker: 100 % test coverage on every row in this section.
 
 | RN | iOS | Status | Owning file(s) | Notes |
 |---|---|---|---|---|
-| `app/(app)/bills/index.tsx` | `Features/Bills/BillsListView.swift` | ☐ | | "Paid this cycle" indicator per member |
-| `app/(app)/bills/[id].tsx` (create/edit) | `Features/Bills/BillFormView.swift` | ☐ | | Frequency, amount or variable, split type, exclusions |
-| Bill detail | `Features/Bills/BillDetailView.swift` | ☐ | | Cycle override entry, mark-paid toggle, delete |
-| RecurringBillsRepository | `Core/Supabase/Repositories/RecurringBillsRepository.swift` | ☐ | | |
-| BillCyclePaymentsRepository | `Core/Supabase/Repositories/BillCyclePaymentsRepository.swift` | ☐ | | Insert/delete `(bill, cycle, member)` |
-| BillCycleAmountsRepository | `Core/Supabase/Repositories/BillCycleAmountsRepository.swift` | ☐ | | Variable bill cycle override |
-| Variable-bill mark-paid gate | (in `BillDetailViewModel`) | ☐ | | Match `bcp_enforce_amount` trigger UX |
+| `app/(app)/bills/index.tsx` | `Features/Bills/BillsView.swift` | ☑ | `Features/Bills/BillsView.swift`, `Features/Bills/BillsListViewModel.swift` | Paid-count per bill + "you paid" badge + paused/overdue labels |
+| `app/(app)/bills/[id].tsx` (create/edit) | `Features/Bills/BillFormView.swift` | ☑ | `Features/Bills/BillFormView.swift`, `Features/Bills/BillFormViewModel.swift` | Name/amount(nullable)/frequency/date/active/included-members; equal-split only (custom_pct/_amt deferred) |
+| Bill detail | `Features/Bills/BillDetailView.swift` | ☑ | `Features/Bills/BillDetailView.swift`, `Features/Bills/BillDetailViewModel.swift` | Cycle-amount override entry, current-member mark-paid toggle, per-member share display, edit-lock when any member has paid |
+| RecurringBillsRepository | `Core/Repositories/RecurringBillsRepository.swift` | ☑ | `Core/Repositories/RecurringBillsRepository.swift` | Bills + `bill_cycle_amounts` + `bill_cycle_payments` collapsed into one repo to match the RN hooks module |
+| Variable-bill mark-paid gate | (in `BillDetailViewModel`) | ☑ | `Features/Bills/BillDetailViewModel.swift` | Client-side gate mirrors `bcp_enforce_amount` — toggling disabled until `bill_cycle_amounts` row exists |
 
 ---
 
@@ -152,10 +150,10 @@ P1 ship-blocker: 100 % test coverage on every row in this section.
 
 | RN | iOS | Status | Owning file(s) | Notes |
 |---|---|---|---|---|
-| `app/(app)/settle.tsx` | `Features/Settle/SettleView.swift` | ☐ | | Net pairwise debts, "Pay" + "Mark paid" |
-| Per-member breakdown | `Features/Settle/BalanceBreakdownView.swift` | ☐ | | Current cycle |
-| `settle_pair` RPC wrapper | `SettlementsRepository.settlePair(...)` | ☐ | `Core/Supabase/Repositories/SettlementsRepository.swift` | |
-| Venmo / Cash App handoff | `UIApplication.open(_:)` from `Domain/Deeplinks/` | ☐ | | |
+| `app/(app)/settle.tsx` | `Features/Settle/SettleView.swift` | ☑ | `HomesplitIOS/Features/Settle/SettleView.swift`, `SettleViewModel.swift` | Pairwise debts for "Your balances" (so Mark paid maps to real splits), simplified for "Between roommates" |
+| Per-member breakdown | `Features/Settle/BalanceBreakdownView.swift` | ☑ | `HomesplitIOS/Features/Settle/BalanceBreakdownView.swift`, `BalanceBreakdownViewModel.swift` | Current cycle; net card + you-owe/they-owe lists + math card |
+| `settle_pair` RPC wrapper | `SettlementsRepository.settlePair(...)` | ☑ | `HomesplitIOS/Core/Repositories/BalancesRepository.swift` | Reused existing `BalancesRepository.settlePair` rather than adding a dedicated repo |
+| Venmo / Cash App handoff | `UIApplication.open(_:)` from `Domain/Deeplinks/` | ☑ | `HomesplitIOS/Features/Settle/SettleView.swift` | Confirmation dialog → `Deeplinks.buildVenmoUrl` / `buildCashAppUrl`; falls back to error message if app unavailable |
 
 ---
 

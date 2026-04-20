@@ -60,6 +60,9 @@ final class AuthSession {
     /// Send a magic link to the user's email.
     func signInWithEmail(_ email: String) async throws {
         lastError = nil
+        guard Configuration.isSupabaseConfigured else {
+            throw ConfigurationError.supabaseNotConfigured
+        }
         try await provider.client.auth.signInWithOTP(
             email: email,
             redirectTo: Self.magicLinkRedirect
@@ -68,6 +71,10 @@ final class AuthSession {
 
     /// Complete the magic-link round-trip after the URL deep-links back in.
     func handleAuthCallback(url: URL) async {
+        guard Configuration.isSupabaseConfigured else {
+            lastError = ConfigurationError.supabaseNotConfigured.localizedDescription
+            return
+        }
         do {
             let session = try await provider.client.auth.session(from: url)
             self.session = session
@@ -78,6 +85,11 @@ final class AuthSession {
     }
 
     func signOut() async {
+        guard Configuration.isSupabaseConfigured else {
+            session = nil
+            user = nil
+            return
+        }
         do {
             try await provider.client.auth.signOut()
             session = nil
