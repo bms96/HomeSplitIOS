@@ -1,0 +1,145 @@
+name: HomesplitIOS
+
+options:
+  bundleIdPrefix: app.homesplit
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  groupSortPosition: top
+  xcodeVersion: "16.0"
+
+configs:
+  Debug-Dev: debug
+  Release-Dev: release
+  Release-Prod: release
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    CLANG_ENABLE_MODULES: YES
+    ENABLE_MODULE_VERIFIER: YES
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: "2.0.0"
+  RevenueCat:
+    url: https://github.com/RevenueCat/purchases-ios
+    from: "5.0.0"
+  PostHog:
+    url: https://github.com/PostHog/posthog-ios
+    from: "3.0.0"
+  Sentry:
+    url: https://github.com/getsentry/sentry-cocoa
+    from: "8.30.0"
+
+targets:
+
+  HomesplitIOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: HomesplitIOS
+        excludes:
+          - "SupportingFiles/Config.*.xcconfig"
+          - "SupportingFiles/HomesplitIOS.entitlements"
+          - "Resources/Info.plist"
+    configFiles:
+      Debug-Dev:    HomesplitIOS/SupportingFiles/Config.Debug-Dev.xcconfig
+      Release-Dev:  HomesplitIOS/SupportingFiles/Config.Release-Dev.xcconfig
+      Release-Prod: HomesplitIOS/SupportingFiles/Config.Release-Prod.xcconfig
+    settings:
+      base:
+        PRODUCT_NAME: Homesplit
+        PRODUCT_BUNDLE_IDENTIFIER: app.homesplit.ios
+        TARGETED_DEVICE_FAMILY: "1"   # iPhone only
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
+        INFOPLIST_FILE: HomesplitIOS/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: HomesplitIOS/SupportingFiles/HomesplitIOS.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: NO
+    dependencies:
+      - package: Supabase
+        product: Supabase
+      - package: RevenueCat
+        product: RevenueCat
+      - package: RevenueCat
+        product: RevenueCatUI
+      - package: PostHog
+        product: PostHog
+      - package: Sentry
+        product: Sentry
+
+  HomesplitIOSTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: HomesplitIOSTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.homesplit.ios.tests
+        BUNDLE_LOADER: $(TEST_HOST)
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Homesplit.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Homesplit
+    dependencies:
+      - target: HomesplitIOS
+
+  HomesplitIOSUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: HomesplitIOSUITests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.homesplit.ios.uitests
+        TEST_TARGET_NAME: HomesplitIOS
+    dependencies:
+      - target: HomesplitIOS
+
+schemes:
+
+  HomesplitIOS:
+    build:
+      targets:
+        HomesplitIOS: all
+        HomesplitIOSTests: [test]
+        HomesplitIOSUITests: [test]
+    run:
+      config: Debug-Dev
+    test:
+      config: Debug-Dev
+      targets:
+        - HomesplitIOSTests
+        - HomesplitIOSUITests
+    profile:
+      config: Release-Dev
+    analyze:
+      config: Debug-Dev
+    archive:
+      config: Release-Dev
+
+  HomesplitIOS (Release-Prod):
+    build:
+      targets:
+        HomesplitIOS: all
+    run:
+      config: Release-Prod
+    test:
+      config: Release-Prod
+    profile:
+      config: Release-Prod
+    analyze:
+      config: Release-Prod
+    archive:
+      config: Release-Prod

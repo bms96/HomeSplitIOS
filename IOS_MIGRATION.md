@@ -15,7 +15,7 @@
 | ➖ | Intentionally deferred (post-MVP) — see notes |
 | ✂︎ | Removed by design (RN-only or out of iOS scope) |
 
-**Last updated:** 2026-04-19
+**Last updated:** 2026-04-20
 **Repo branch:** `main`
 
 ---
@@ -24,7 +24,7 @@
 
 | Phase | Status | Notes |
 |---|---|---|
-| 0 — Bootstrap (Xcode project, SPM, CI) | ☐ | Not yet generated |
+| 0 — Bootstrap (Xcode project, SPM, CI) | ◐ | Xcode project generated via XcodeGen; SPM packages resolved; CI not yet wired |
 | 1 — Domain port (`utils/*` → `Domain/*`) | ☐ | |
 | 2 — Core plumbing (Supabase, Keychain, RC, push) | ☐ | |
 | 3 — Auth + onboarding | ☐ | |
@@ -42,16 +42,19 @@
 
 | Item | Status | Owning file(s) | Notes |
 |---|---|---|---|
-| `HomesplitIOS.xcodeproj` (iOS 17 min, iPhone-only, SwiftUI App) | ☐ | `HomesplitIOS.xcodeproj` | |
-| SPM dependencies: `supabase-swift`, `RevenueCat`, `RevenueCatUI`, `posthog-ios`, `sentry-cocoa` | ☐ | `Package.resolved` | |
-| Xcconfig: `Config.Debug-Dev`, `Config.Release-Dev`, `Config.Release-Prod` + `Config.Example` | ☐ | `HomesplitIOS/SupportingFiles/` | |
-| `Configuration.swift` — Info.plist reader for env values | ☐ | `HomesplitIOS/App/Configuration.swift` | |
-| Swift Testing target (`HomesplitIOSTests`) | ☐ | `HomesplitIOSTests/` | |
-| XCUITest smoke target (`HomesplitIOSUITests`) | ☐ | `HomesplitIOSUITests/` | |
+| `HomesplitIOS.xcodeproj` (iOS 17 min, iPhone-only, SwiftUI App) | ☑ | `HomesplitIOS.xcodeproj` (generated) | Generated from `project.yml` via XcodeGen |
+| XcodeGen spec | ☑ | `project.yml` | Run `xcodegen generate` to (re)create the xcodeproj |
+| SPM dependencies: `supabase-swift`, `RevenueCat`, `RevenueCatUI`, `posthog-ios`, `sentry-cocoa` | ☑ | `project.yml` | All 11 transitive packages resolve cleanly |
+| Xcconfig: `Config.Debug-Dev`, `Config.Release-Dev`, `Config.Release-Prod` + `Config.Example` | ☑ | `HomesplitIOS/SupportingFiles/` | Values still need to be filled in by the developer |
+| `Configuration.swift` — Info.plist reader for env values | ☑ | `HomesplitIOS/App/Configuration.swift` | |
+| Swift Testing target (`HomesplitIOSTests`) | ☑ | `HomesplitIOSTests/SmokeTests.swift` | Placeholder smoke test |
+| XCUITest smoke target (`HomesplitIOSUITests`) | ☑ | `HomesplitIOSUITests/SmokeFlowTests.swift` | Placeholder smoke test |
 | GitHub Actions CI (Unit plan on PR) | ☐ | `.github/workflows/ios-ci.yml` | |
 | SwiftFormat / swift-format pre-commit | ☐ | `.swiftformat` | |
-| Entitlements: Push, Associated Domains (`applinks:homesplit.app`), Keychain | ☐ | `HomesplitIOS/SupportingFiles/HomesplitIOS.entitlements` | |
-| Info.plist: URL scheme `homesplit`, `LSApplicationQueriesSchemes` for `venmo`/`cashapp` | ☐ | `HomesplitIOS/Resources/Info.plist` | |
+| Entitlements: Push, Associated Domains (`applinks:homesplit.app`) | ☑ | `HomesplitIOS/SupportingFiles/HomesplitIOS.entitlements` | |
+| Info.plist: URL scheme `homesplit`, `LSApplicationQueriesSchemes` for `venmo`/`cashapp` | ☑ | `HomesplitIOS/Resources/Info.plist` | |
+| Asset Catalog (AppIcon placeholder, AccentColor, LaunchBackground) | ☑ | `HomesplitIOS/Resources/Assets.xcassets` | AppIcon artwork still needed (Phase 10) |
+| First verified build on a simulator | ☐ | | Blocked on iOS 26.4 simulator runtime install (8.49 GB) |
 
 ---
 

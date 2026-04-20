@@ -66,18 +66,33 @@ For full project context, architecture, and conventions, read
 # 1. Clone
 git clone <repo-url> HomesplitIOS && cd HomesplitIOS
 
-# 2. Resolve Swift packages and open the project
-xed HomesplitIOS.xcodeproj          # equivalent to opening from Finder
-# Xcode will fetch SPM packages on first open. Wait for it to finish.
+# 2. Install XcodeGen (one-time, system-wide)
+brew install xcodegen
 
-# 3. Create your local xcconfig files from the templates
-cp HomesplitIOS/SupportingFiles/Config.Example.xcconfig \
-   HomesplitIOS/SupportingFiles/Config.Debug-Dev.xcconfig
-# (repeat for Release-Dev and Release-Prod, filling in the right values)
+# 3. Generate the Xcode project from project.yml
+xcodegen generate
+# Produces HomesplitIOS.xcodeproj. Regenerate any time project.yml changes.
+# The generated .xcodeproj is gitignored; only project.yml is checked in.
 
-# 4. Apply database migrations to the dev project (one-time per fresh project)
+# 4. Open in Xcode (first open resolves SPM packages automatically)
+open HomesplitIOS.xcodeproj
+
+# 5. Fill in your local xcconfig secrets
+# The three Config.*.xcconfig files are gitignored and ship with blank values.
+# Edit them with your real Supabase / RevenueCat / PostHog / Sentry keys:
+$EDITOR HomesplitIOS/SupportingFiles/Config.Debug-Dev.xcconfig
+$EDITOR HomesplitIOS/SupportingFiles/Config.Release-Dev.xcconfig
+$EDITOR HomesplitIOS/SupportingFiles/Config.Release-Prod.xcconfig
+
+# 6. Apply database migrations to the dev project (one-time per fresh project)
 supabase db push --project-ref $SUPABASE_DEV_REF
 ```
+
+> **Platform prerequisites.** The Xcode you installed bundles the iOS SDK, but
+> the iOS **platform support package** (including simulator runtime) is a
+> separate ~8.5 GB download. If `xcodebuild` reports "iOS x.y is not
+> installed", install the platform via Xcode → Settings → Platforms, or from
+> the CLI: `xcodebuild -downloadPlatform iOS`.
 
 The xcconfig files are gitignored. Fill them in by hand or pull values from
 your team's password manager. **Never commit xcconfig values.** See

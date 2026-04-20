@@ -1,0 +1,30 @@
+// Config.Example.xcconfig
+//
+// Template for all three build configurations. Copy this file to:
+//   Config.Debug-Dev.xcconfig
+//   Config.Release-Dev.xcconfig
+//   Config.Release-Prod.xcconfig
+// and fill in the real values. The concrete files are gitignored — never
+// commit actual API keys.
+//
+// See .claude/docs/ios/app-identity.md for the full key reference.
+
+// Build environment — used by Configuration.swift at runtime.
+APP_ENV = development
+
+// Supabase project (dev or prod).
+// The URL value contains a `//` which Xcconfig treats as a comment start,
+// so split it across a substitution:
+SUPABASE_SCHEME = https
+SUPABASE_HOST = YOUR_PROJECT_REF.supabase.co
+SUPABASE_URL = $(SUPABASE_SCHEME):/$()/$(SUPABASE_HOST)
+SUPABASE_ANON_KEY = your-anon-key-here
+
+// RevenueCat iOS key.
+RC_IOS_KEY = your-revenuecat-ios-key
+
+// PostHog project key.
+POSTHOG_KEY = your-posthog-key
+
+// Sentry DSN (leave blank in dev; set for prod).
+SENTRY_DSN =
