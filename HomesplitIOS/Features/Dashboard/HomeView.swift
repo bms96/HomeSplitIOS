@@ -112,6 +112,7 @@ struct HomeView: View {
                                     splitId: item.mySplitId,
                                     household: household
                                 )
+                                await app.badges.refresh(household: household)
                             }
                         }
                     }

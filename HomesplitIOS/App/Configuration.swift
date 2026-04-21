@@ -23,6 +23,10 @@ enum Configuration {
     static var sentryDSN:       String { stringValue(.sentryDSN) }
     static var appEnv:          String { stringValue(.appEnv) }
     static var isProd:          Bool   { appEnv == "production" }
+    /// True in any non-production build. Used to show the in-app DEV badge
+    /// and expose the paywall bypass button. Keep this the inverse of
+    /// `isProd` so adding new envs (e.g. "staging") still counts as dev.
+    static var isDev:           Bool   { !isProd }
 
     /// Non-fatal probe used at boot so AuthSession can skip initialization
     /// when the test host launches with an empty xcconfig. Real requests

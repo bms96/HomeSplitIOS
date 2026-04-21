@@ -15,7 +15,7 @@
 | ➖ | Intentionally deferred (post-MVP) — see notes |
 | ✂︎ | Removed by design (RN-only or out of iOS scope) |
 
-**Last updated:** 2026-04-20 (Phase 1 domain port complete · Phase 2 Supabase/Keychain/Households shipped · Phase 3 auth+onboarding wired · Phase 4a expenses repo+list+add shipped · Phase 4b balances repo + Home dashboard cards + "You owe" mark-paid shipped · Phase 4c expense detail/edit/delete + row-tap navigation shipped · Phase 5 recurring bills repo + list + add/edit form + detail view with cycle-amount override & mark-paid shipped · Phase 6 settle up + balance breakdown + Venmo/Cash App handoff shipped)
+**Last updated:** 2026-04-20 (Phase 1 domain port complete · Phase 2 Supabase/Keychain/Households shipped · Phase 3 auth+onboarding wired · Phase 4a expenses repo+list+add shipped · Phase 4b balances repo + Home dashboard cards + "You owe" mark-paid shipped · Phase 4c expense detail/edit/delete + row-tap navigation shipped · Phase 5 recurring bills repo + list + add/edit form + detail view with cycle-amount override & mark-paid shipped · Phase 6 settle up + balance breakdown + Venmo/Cash App handoff shipped · Phase 7 household overview + invite + categories + settings shipped · Phase 8 move-out repo + 3-step flow + PDF settlement shipped · Phase 9 paywall gate service + fallback sheet wired at the three triggers; live RevenueCat SDK + webhook still pending · Phase 10 JoinHouseholdView + deeplink router (custom scheme + universal link) + tab-bar badges shipped; artwork/privacy-manifest/CI/TestFlight pending)
 **Repo branch:** `main`
 
 ---
@@ -31,10 +31,10 @@
 | 4 — Dashboard + Expenses | ◐ | Expenses repo+list+add, BalancesRepository, HomeView cards ("You owe" / "Owed to you") and mark-paid shipped; expense detail/edit/delete + row-tap navigation shipped; bills-due card pending |
 | 5 — Bills | ☑ | Repo + list + add/edit form + detail with cycle-amount override & mark-paid shipped (equal-split only; custom_pct/_amt deferred) |
 | 6 — Settle + Balance breakdown | ☑ | SettleView + BalanceBreakdownView + Venmo/Cash App handoff; reuses `BalancesRepository.settlePair` |
-| 7 — Household management | ☐ | |
-| 8 — Move-out | ☐ | |
-| 9 — Paywall + RevenueCat | ☐ | |
-| 10 — Polish + release prep | ☐ | |
+| 7 — Household management | ◐ | Household overview, Invite, Categories, Settings shipped; Move-out stub is Phase 8 |
+| 8 — Move-out | ☑ | Repo + 3-step flow + PDFKit settlement summary + Storage upload best-effort |
+| 9 — Paywall + RevenueCat | ◐ | Gate service + fallback sheet wired at 3rd-member invite, 3rd-bill add, move-out start. Live RevenueCat SDK + webhook still pending. |
+| 10 — Polish + release prep | ◐ | Join-by-token deeplink router (custom scheme + universal link) + tab-bar badges shipped. App icon artwork, privacy manifest, CI workflow, and TestFlight gating remain. |
 
 ---
 
@@ -86,11 +86,11 @@ P1 ship-blocker: 100 % test coverage on every row in this section.
 | `AppSession` (auth-state observer) | `stores/authStore.ts` | `App/AppSession.swift` | ☑ | `Core/Auth/AuthSession.swift`, `Core/Household/HouseholdSession.swift` | `@Observable`, `authStateChanges` listener |
 | Auth repository | `useAuth.ts` | `Core/Supabase/Repositories/AuthRepository.swift` | ☑ | (folded into `AuthSession`) | Magic-link send, sign-out, `handleAuthCallback` |
 | Households repository | `hooks/useHousehold.ts` | `Core/Supabase/Repositories/HouseholdsRepository.swift` | ☑ | `Core/Repositories/HouseholdRepository.swift` | `create_household`, `join_household_by_token`, `rotate_invite_token` |
-| Members repository | (inline in `useHousehold`) | `Core/Supabase/Repositories/MembersRepository.swift` | ☐ | | Active filter; `was_household_member` aware |
-| Cycles repository | (inline) | `Core/Supabase/Repositories/CyclesRepository.swift` | ☐ | | Read current open cycle |
+| Members repository | (inline in `useHousehold`) | `Core/Supabase/Repositories/MembersRepository.swift` | ☑ | `Core/Repositories/HouseholdRepository.swift` (`members(householdId:)`) | Folded into `HouseholdRepository` to match the RN hooks module; applies `left_at IS NULL` active filter |
+| Cycles repository | (inline) | `Core/Supabase/Repositories/CyclesRepository.swift` | ☑ | `Core/Repositories/ExpensesRepository.swift` (`currentCycle(householdId:)`) | Folded into `ExpensesRepository` — consumed by `HomeView`, `BillsView`, `BadgeStore` |
 | RevenueCat service | `lib/revenuecat.ts` | `Core/RevenueCat/RevenueCatService.swift` | ☐ | | `logIn("household:\(uuid)")`, entitlement check |
 | Notifications service | `lib/notifications.ts` | `Core/Notifications/NotificationsService.swift` | ☐ | | APNs token → `push_tokens` upsert |
-| Logger | `console.log` | `os.Logger` wrappers | ☐ | `Core/Logging.swift` | Per-subsystem categories; off in Release |
+| Logger | `console.log` | `os.Logger` wrappers | ➖ | | No `print()` calls exist in the Swift target; revisit if/when one is introduced |
 | Analytics shim | `lib/analytics.ts` (PostHog) | `Core/Analytics.swift` | ☐ | | Match RN event names exactly |
 | Sentry init | `lib/sentry.ts` | `Core/Crash/SentryService.swift` | ☐ | | Off in DEBUG |
 
@@ -102,7 +102,7 @@ P1 ship-blocker: 100 % test coverage on every row in this section.
 |---|---|---|---|---|
 | `app/(auth)/sign-in.tsx` | `Features/Auth/SignInView.swift` | ☑ | `Features/Auth/SignInView.swift` | Magic-link email entry; dev bypass pending |
 | Magic-link callback handler | `Features/Auth/AuthCallbackView.swift` | ☑ | `App/HomesplitApp.swift` (`.onOpenURL`), `Core/Auth/AuthSession.handleAuthCallback` | Routed inline from root scene |
-| `app/(auth)/join/[token].tsx` | `Features/Onboarding/JoinHouseholdView.swift` | ☐ | | Universal link `https://homesplit.app/join/{token}` |
+| `app/(auth)/join/[token].tsx` | `Features/Onboarding/JoinHouseholdView.swift` | ☑ | `Features/Onboarding/JoinHouseholdView.swift`, `App/PendingDeeplink.swift`, `App/RootView.swift` | Sheet auto-presents once signed in + session loaded; calls `join_household_by_token` and refreshes household session |
 | First-run: create household | `Features/Onboarding/CreateHouseholdView.swift` | ☑ | `Features/Onboarding/CreateHouseholdView.swift` | Calls `create_household` RPC, refreshes `HouseholdSession` |
 | Root router (auth / onboarding / tabs) | `App/HomesplitApp.swift` + `App/RootRouter.swift` | ☑ | `App/RootView.swift` | Routes between SignInView / CreateHouseholdView / MainTabView |
 
@@ -112,7 +112,7 @@ P1 ship-blocker: 100 % test coverage on every row in this section.
 
 | RN | iOS | Status | Owning file(s) | Notes |
 |---|---|---|---|---|
-| Tab bar (Home / Expenses / Bills / Household) | `App/RootTabView.swift` | ◐ | `Features/Dashboard/MainTabView.swift` | 4 tabs wired; badges not yet |
+| Tab bar (Home / Expenses / Bills / Household) | `App/RootTabView.swift` | ☑ | `Features/Dashboard/MainTabView.swift`, `Core/Badges/BadgeStore.swift` | 4 tabs wired; Home badge = unsettled "you owe" count, Bills badge = overdue active bills the viewer hasn't paid; refresh driven centrally by `BadgeStore` on `householdId` change |
 | Dashboard screen | `Features/Dashboard/DashboardView.swift` | ◐ | `Features/Dashboard/HomeView.swift`, `HomeViewModel.swift` | You owe / Owed to you cards + "You owe" section with mark-paid; bills-due card deferred to Phase 5 |
 | Dashboard stat cards | `Components/Cards/BalanceCard.swift`, `Components/Cards/StatCard.swift` | ◐ | (inline in `HomeView.swift`) | Tones from `Domain/CardState/`; extract to Components when a 3rd consumer appears |
 | Recent transactions list | `Features/Dashboard/RecentTransactionsSection.swift` | ◐ | (inline "You owe" list in `HomeView.swift`) | Top 5 unpaid expenses where viewer is debtor; full recent-transactions list + settlements pending |
@@ -161,11 +161,11 @@ P1 ship-blocker: 100 % test coverage on every row in this section.
 
 | RN | iOS | Status | Owning file(s) | Notes |
 |---|---|---|---|---|
-| `app/(app)/household/index.tsx` | `Features/Household/HouseholdView.swift` | ☐ | | Members, invite, categories, move-out, settings, sign-out |
-| `app/(app)/household/invite.tsx` | `Features/Household/InviteView.swift` | ☐ | | Copy + share + rotate invite URL |
-| Categories management | `Features/Household/CategoriesView.swift` | ☐ | | Wraps `expense_category_preferences` |
-| Household settings | `Features/Household/SettingsView.swift` | ☐ | | Rename household / self; `#if DEBUG` reset |
-| Member rename / color edit | `Features/Household/MemberEditView.swift` | ☐ | | |
+| `app/(app)/household/index.tsx` | `Features/Household/HouseholdView.swift` | ☑ | `Features/Household/HouseholdView.swift`, `HouseholdViewModel.swift`, `Components/MemberAvatar.swift` | Overview with member list, Settle/Settings quick actions, invite/categories/move-out/sign-out footer; Move-out button presents `MoveOutFlowView` (Phase 8) behind the paywall gate |
+| `app/(app)/household/invite.tsx` | `Features/Household/InviteView.swift` | ☑ | `Features/Household/InviteView.swift` | Tap-to-copy link card, Copy + ShareLink + Rotate (confirmationDialog) |
+| Categories management | `Features/Household/CategoriesView.swift` | ☑ | `Features/Household/CategoriesView.swift`, `CategoriesViewModel.swift`, `Domain/Categories/CategoryDisplay.swift`, `Core/Repositories/CategoryPreferencesRepository.swift` | Inline rename, visibility toggle, Reset; upsert via `expense_category_preferences` |
+| Household settings | `Features/Household/SettingsView.swift` | ☑ | `Features/Household/SettingsView.swift` | Household name + own display name; dev-mock impersonation and reset-data intentionally skipped |
+| Member rename / color edit | `Features/Household/MemberEditView.swift` | ☐ | | Deferred — rename lives in SettingsView for now |
 
 ---
 
@@ -173,11 +173,11 @@ P1 ship-blocker: 100 % test coverage on every row in this section.
 
 | RN | iOS | Status | Owning file(s) | Notes |
 |---|---|---|---|---|
-| `app/(app)/household/move-out.tsx` (multi-step) | `Features/Household/MoveOutFlow/` | ☐ | | Pick → review → done |
-| `complete_move_out` RPC wrapper | `MoveOutRepository.complete(...)` | ☐ | `Core/Supabase/Repositories/MoveOutRepository.swift` | |
-| PDF generation | `Features/Household/MoveOutFlow/MoveOutPDF.swift` | ☐ | | PDFKit; layout matches RN `docs/patterns.md` |
-| PDF upload to Storage | (in `MoveOutRepository`) | ☐ | | `settlement-pdfs/{household_id}/{move_out_id}.pdf` |
-| Paywall gate at flow start | (in `MoveOutFlow`) | ☐ | | Calls `requireProOrPresent(_:)` |
+| `app/(app)/household/move-out.tsx` (multi-step) | `Features/Household/MoveOutFlow/` | ☑ | `Features/Household/MoveOutFlow/MoveOutFlowView.swift`, `MoveOutFlowViewModel.swift` | Pick → review → done |
+| `complete_move_out` RPC wrapper | `MoveOutRepository.complete(...)` | ☑ | `Core/Repositories/MoveOutRepository.swift` | |
+| PDF generation | `Features/Household/MoveOutFlow/MoveOutPDF.swift` | ☑ | `Features/Household/MoveOutFlow/MoveOutPDF.swift` | PDFKit; single-page settlement summary |
+| PDF upload to Storage | (in `MoveOutRepository`) | ☑ | `Core/Repositories/MoveOutRepository.swift` | `settlement-pdfs/{household_id}/{move_out_id}.pdf`; best-effort — local ShareLink fallback |
+| Paywall gate at flow start | (in `MoveOutFlow`) | ☑ | `Features/Household/MoveOutFlow/MoveOutFlowView.swift` | Evaluates `PaywallGateService` on appear; blocks entry + dismisses on close |
 
 ---
 
@@ -185,10 +185,10 @@ P1 ship-blocker: 100 % test coverage on every row in this section.
 
 | RN | iOS | Status | Owning file(s) | Notes |
 |---|---|---|---|---|
-| Paywall screen | `Features/Paywall/PaywallView.swift` | ☐ | | `RevenueCatUI` paywall when available; fallback otherwise |
-| Paywall gate (3rd member, 3rd bill, move-out) | `Features/Paywall/PaywallGate.swift` | ☐ | | Pure decision function; tests in P3 |
-| RC identify on sign-in / reset on sign-out | (in `RevenueCatService`) | ☐ | | App User ID = `household:{uuid}` |
-| RevenueCat → Supabase webhook | (open question — see migration plan) | ➖ | | Decide during Phase 9 whether to add Edge Function |
+| Paywall screen | `Features/Paywall/PaywallGateView.swift` | ☑ | `Features/Paywall/PaywallGateView.swift` | Fallback SwiftUI sheet; `RevenueCatUI` bridge lands with SPM wiring |
+| Paywall gate (3rd member, 3rd bill, move-out) | `Features/Paywall/PaywallGateService.swift` | ☑ | `Domain/Paywall/PaywallTrigger.swift`, `Features/Paywall/PaywallGateService.swift`, `Core/Repositories/SubscriptionsRepository.swift`, `Core/RevenueCat/RevenueCatClient.swift` | Reads `subscriptions` + RC CustomerInfo; stub client until live SDK linked |
+| RC identify on sign-in / reset on sign-out | (in `RevenueCatClient`) | ◐ | `Core/RevenueCat/RevenueCatClient.swift` | Protocol has `identifyHousehold` / `resetIdentity`; live wiring pending SPM |
+| RevenueCat → Supabase webhook | (open question — see migration plan) | ➖ | | Decide before TestFlight external |
 
 ---
 
@@ -207,11 +207,11 @@ P1 ship-blocker: 100 % test coverage on every row in this section.
 
 | Pattern | iOS handler | Status | Notes |
 |---|---|---|---|
-| `homesplit://join/{token}` | `App/Routing/DeeplinkRouter.swift` | ☐ | Push onto Onboarding |
-| `https://homesplit.app/join/{token}` (universal link) | same | ☐ | Requires `apple-app-site-association` hosted on domain |
-| `homesplit://auth-callback?...` | same | ☐ | Magic-link return |
-| Venmo handoff | `Domain/Deeplinks/Deeplinks.swift` | ☐ | Build URL only — `UIApplication.open(_:)` from view |
-| Cash App handoff | same | ☐ | |
+| `homesplit://join/{token}` | `App/Routing/DeeplinkRouter.swift` | ☑ | Parsed in `HomesplitApp.handle(url:)`; token held in `PendingDeeplink`; presents `JoinHouseholdView` sheet from `RootView` |
+| `https://homesplit.app/join/{token}` (universal link) | same | ☑ | `.onContinueUserActivity(NSUserActivityTypeBrowsingWeb)` routes through the same handler; requires `apple-app-site-association` hosted on the domain before TestFlight |
+| `homesplit://auth-callback?...` | same | ☑ | Handled inline in `HomesplitApp.handle(url:)` via `AuthSession.handleAuthCallback` |
+| Venmo handoff | `Domain/Deeplinks/Deeplinks.swift` | ☑ | `Domain/Deeplinks/Deeplinks.swift` + `Features/Settle/SettleView.swift` open via `UIApplication.open(_:)` |
+| Cash App handoff | same | ☑ | same |
 
 ---
 
@@ -219,13 +219,14 @@ P1 ship-blocker: 100 % test coverage on every row in this section.
 
 | Token | iOS file | Status | Notes |
 |---|---|---|---|
-| Color palette | `DesignSystem/Colors.swift` + `Assets.xcassets` semantic colors | ☐ | Light + Dark variants |
-| Typography scale | `DesignSystem/Typography.swift` | ☐ | Prefer SwiftUI semantic styles |
-| Spacing (4 pt grid) | `DesignSystem/Spacing.swift` | ☐ | |
-| Shadows / elevation | `DesignSystem/Elevation.swift` | ☐ | |
-| Reusable primitives | `Components/Primitives/HSButton.swift`, `HSTextField.swift`, `HSCurrencyField.swift` | ☐ | |
-| Reusable cards | `Components/Cards/*` | ☐ | |
-| `MemberAvatar` | `Components/MemberAvatar.swift` | ☐ | |
+| Color palette | `DesignSystem/Colors.swift` + `Assets.xcassets` semantic colors | ☑ | `HSColor` tokens with adaptive light/dark variants (brand accents stay constant) |
+| Typography scale | `DesignSystem/Typography.swift` | ☑ | `HSFont` token set; built on SwiftUI semantic styles (Dynamic Type wired) |
+| Spacing (4 pt grid) | `DesignSystem/Spacing.swift` | ☑ | `HSSpacing` scale (`xs`/`sm`/`md`/`base`/`lg`/`xl`/`xxl`) |
+| Shadows / elevation | `DesignSystem/Elevation.swift` | ➖ | Not needed at MVP — flat cards with `RoundedRectangle` + tinted backgrounds |
+| Reusable primitives | `Components/Primitives/HSButton.swift`, `HSTextField.swift`, `HSCurrencyField.swift` | ◐ | `HSButton` + `HSTextField` live; currency input uses a plain `TextField` with `Decimal(string:)` parsing — dedicated `HSCurrencyField` deferred |
+| Reusable cards | `Components/Cards/*` | ➖ | Cards currently inlined in `HomeView`; extract when a 3rd consumer lands (matches CLAUDE.md "three similar lines beats premature abstraction") |
+| `MemberAvatar` | `Components/MemberAvatar.swift` | ☑ | `Components/MemberAvatar.swift` |
+| Dev-build indicator | `Components/DevBadge.swift` | ☑ | Orange "DEV · {env}" pill overlay, no-op in prod, wired in `HomesplitApp` via `.devBadgeOverlay()` |
 
 ---
 
@@ -233,12 +234,12 @@ P1 ship-blocker: 100 % test coverage on every row in this section.
 
 | Test plan | Status | Notes |
 |---|---|---|
-| Domain unit tests (Swift Testing) | ☐ | P1 ship blocker — 100 % on `Domain/` |
-| ViewModel state-machine tests | ☐ | P3 |
+| Domain unit tests (Swift Testing) | ☑ | 174 tests / 31 suites across `Splits`, `Debts`, `Proration`, `BillFrequency`, `BillStatus`, `CardState`, `Deeplinks`, `Money` |
+| ViewModel state-machine tests | ☐ | P3 — Paywall gate, move-out proration VM, add-expense validation |
 | RLS integration tests (local Supabase) | ☐ | P2 — eight scenarios from `.claude/docs/ios/testing.md` |
 | Decoder fixtures | ☐ | One JSON per DTO in `HomesplitIOSTests/Fixtures/` |
-| XCUITest smoke (launch + sign-in reachable + tab bar present) | ☐ | One file: `HomesplitIOSUITests/SmokeFlowTests.swift` |
-| CI test plan wired to PRs (Unit only) | ☐ | |
+| XCUITest smoke (launch + sign-in reachable + tab bar present) | ◐ | `HomesplitIOSUITests/SmokeFlowTests.swift` exists but has a `main actor-isolated property` warning to clean up |
+| CI test plan wired to PRs (Unit only) | ☐ | `.github/workflows/ios-ci.yml` not yet created |
 
 ---
 

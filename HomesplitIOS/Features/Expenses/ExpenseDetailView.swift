@@ -171,6 +171,7 @@ struct ExpenseDetailView: View {
                         memberId: household.id,
                         householdId: household.householdId
                     )
+                    await app.badges.refresh(household: household)
                 }
             }
         }

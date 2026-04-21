@@ -3,6 +3,20 @@ import SwiftUI
 struct RootView: View {
     @Environment(\.app) private var app
 
+    private var joinSheetBinding: Binding<Bool> {
+        Binding(
+            get: {
+                app.auth.isInitialized
+                    && app.auth.isSignedIn
+                    && app.householdSession.isLoaded
+                    && app.pendingDeeplink.joinToken != nil
+            },
+            set: { showing in
+                if !showing { app.pendingDeeplink.clear() }
+            }
+        )
+    }
+
     var body: some View {
         Group {
             if !app.auth.isInitialized {
@@ -25,6 +39,11 @@ struct RootView: View {
                 await app.householdSession.refresh(userId: userId)
             } else {
                 app.householdSession.clear()
+            }
+        }
+        .sheet(isPresented: joinSheetBinding) {
+            if let token = app.pendingDeeplink.joinToken {
+                JoinHouseholdView(token: token)
             }
         }
     }

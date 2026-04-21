@@ -147,7 +147,12 @@ struct SettleView: View {
                 Button("Mark paid") {
                     let d = debt
                     pendingMarkPaid = nil
-                    Task { await vm.markPaid(d) }
+                    Task {
+                        await vm.markPaid(d)
+                        if let household = app.householdSession.membership {
+                            await app.badges.refresh(household: household)
+                        }
+                    }
                 }
                 Button("Cancel", role: .cancel) { pendingMarkPaid = nil }
             }

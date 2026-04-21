@@ -204,6 +204,7 @@ struct BillDetailView: View {
             guard rowEnabled else { return }
             Task {
                 let completed = await vm.toggleMyPayment()
+                await app.badges.refresh(household: household)
                 if completed { dismiss() }
             }
         } label: {

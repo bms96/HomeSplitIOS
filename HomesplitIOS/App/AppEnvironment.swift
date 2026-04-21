@@ -13,7 +13,13 @@ struct AppEnvironment {
     let expenses: any ExpensesRepositoryProtocol
     let balances: any BalancesRepositoryProtocol
     let recurringBills: any RecurringBillsRepositoryProtocol
+    let categoryPreferences: any CategoryPreferencesRepositoryProtocol
+    let moveOuts: any MoveOutRepositoryProtocol
+    let subscriptions: any SubscriptionsRepositoryProtocol
     let householdSession: HouseholdSession
+    let paywallGate: PaywallGateService
+    let pendingDeeplink: PendingDeeplink
+    let badges: BadgeStore
 
     static func live() -> AppEnvironment {
         let supabase = SupabaseClientProvider.shared
@@ -21,6 +27,10 @@ struct AppEnvironment {
         let expenses = ExpensesRepository(provider: supabase)
         let balances = BalancesRepository(provider: supabase)
         let recurringBills = RecurringBillsRepository(provider: supabase)
+        let categoryPreferences = CategoryPreferencesRepository(provider: supabase)
+        let moveOuts = MoveOutRepository(provider: supabase)
+        let subscriptions = SubscriptionsRepository(provider: supabase)
+        let revenueCat: any RevenueCatClient = StubRevenueCatClient()
         return AppEnvironment(
             supabase: supabase,
             auth: AuthSession(provider: supabase),
@@ -28,7 +38,19 @@ struct AppEnvironment {
             expenses: expenses,
             balances: balances,
             recurringBills: recurringBills,
-            householdSession: HouseholdSession(repository: households)
+            categoryPreferences: categoryPreferences,
+            moveOuts: moveOuts,
+            subscriptions: subscriptions,
+            householdSession: HouseholdSession(repository: households),
+            paywallGate: PaywallGateService(
+                subscriptionsRepo: subscriptions,
+                revenueCat: revenueCat
+            ),
+            pendingDeeplink: PendingDeeplink(),
+            badges: BadgeStore(
+                expensesRepository: expenses,
+                recurringBillsRepository: recurringBills
+            )
         )
     }
 }

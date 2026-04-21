@@ -4,6 +4,8 @@ struct BillsView: View {
     @Environment(\.app) private var app
     @State private var viewModel: BillsListViewModel?
     @State private var isShowingAddSheet = false
+    @State private var paywallTrigger: PaywallTrigger?
+    @State private var isEvaluatingPaywall = false
 
     var body: some View {
         NavigationStack {
@@ -23,12 +25,16 @@ struct BillsView: View {
                 if app.householdSession.membership != nil {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
-                            isShowingAddSheet = true
+                            Task { await onAddTapped() }
                         } label: {
-                            Image(systemName: "plus")
+                            if isEvaluatingPaywall {
+                                ProgressView()
+                            } else {
+                                Image(systemName: "plus")
+                            }
                         }
                         .accessibilityLabel("Add recurring bill")
-                        .disabled(!(viewModel.map { !$0.members.isEmpty } ?? false))
+                        .disabled(!(viewModel.map { !$0.members.isEmpty } ?? false) || isEvaluatingPaywall)
                     }
                 }
             }
@@ -45,9 +51,33 @@ struct BillsView: View {
                     )
                 }
             }
+            .sheet(item: $paywallTrigger) { trigger in
+                PaywallGateView(trigger: trigger) {
+                    isShowingAddSheet = true
+                }
+            }
         }
         .task(id: app.householdSession.membership?.householdId) {
             await refresh()
+        }
+    }
+
+    private func onAddTapped() async {
+        guard let householdId = app.householdSession.membership?.householdId else { return }
+        let activeCount = viewModel?.activeBillCount ?? 0
+        if activeCount < 2 {
+            isShowingAddSheet = true
+            return
+        }
+        isEvaluatingPaywall = true
+        let decision = await app.paywallGate.evaluate(
+            householdId: householdId,
+            trigger: .thirdRecurringBill
+        )
+        isEvaluatingPaywall = false
+        switch decision {
+        case .allow:              isShowingAddSheet = true
+        case .blocked(let t):     paywallTrigger = t
         }
     }
 
